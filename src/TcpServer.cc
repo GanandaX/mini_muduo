@@ -1,5 +1,6 @@
 #include "TcpServer.h"
 #include <assert.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 TcpServer::TcpServer(EventLoop *loop, int listenFd, int threadNum,
@@ -11,6 +12,8 @@ TcpServer::TcpServer(EventLoop *loop, int listenFd, int threadNum,
       lowWaterMarkCallback_(nullptr), highWaterMark_(64 * 1024 * 1024),
       lowWaterMark_(32 * 1024 * 1024),
       writeOperation_(std::move(writeOperation)) {
+  int flags = fcntl(listenFd, F_GETFL);
+  assert(0 == fcntl(listenFd, F_SETFL, flags | O_NONBLOCK));
   acceptor_.setNewConnectionCallback(std::bind(&TcpServer::newConnection, this,
                                                std::placeholders::_1,
                                                std::placeholders::_2));
