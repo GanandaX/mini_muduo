@@ -9,20 +9,14 @@ EventLoopThread::~EventLoopThread() {
     return;
   }
 
-  EventLoop *loop = nullptr;
-  {
-    std::unique_lock<std::mutex> lock(mutex_);
-    cond_.wait(lock, [this]() { return loop_ != nullptr; });
-    loop = loop_;
-  }
-
-  loop->quit();
-  loopThread_.join();
-
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    loop_ = nullptr;
+    if (loop_ != nullptr) {
+      loop_->quit();
+    }
   }
+
+  loopThread_.join();
 }
 
 EventLoop *EventLoopThread::startLoop() {
@@ -46,4 +40,9 @@ void EventLoopThread::threadFunc() {
 
   cond_.notify_one();
   loop.loop();
+
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    loop_ = nullptr;
+  }
 }
